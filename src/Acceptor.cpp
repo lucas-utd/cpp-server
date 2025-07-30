@@ -2,11 +2,12 @@
 #include "Socket.h"
 #include "InetAddress.h"
 #include "Channel.h"
-#include "Server.h"
+
+#include <stdio.h>
 
 Acceptor::Acceptor(EventLoop *_loop) : loop(_loop) {
     sock = new Socket();
-    addr = new InetAddress("127.0.0.1", 8080);
+    addr = new InetAddress("127.0.0.1", 8888);
     sock->bind(addr);
     sock->listen();
     sock->setnonblocking();
@@ -24,7 +25,21 @@ Acceptor::~Acceptor() {
 }
 
 void Acceptor::acceptConnection() {
-    newConnectionCallback(sock);
+    InetAddress *clnt_addr = new InetAddress();
+    Socket *clnt_sock = new Socket(sock->accept(clnt_addr));
+    if (clnt_sock->getFd() < 0) {
+        delete clnt_addr;
+        return; // Accept failed
+    }
+    printf("new client fd %d! IP: %s Port: %d\n", clnt_sock->getFd(),
+           inet_ntoa(clnt_addr->getAddr().sin_addr), ntohs(clnt_addr->getAddr().sin_port));
+    clnt_sock->setnonblocking();
+
+    if (newConnectionCallback) {
+        newConnectionCallback(clnt_sock);
+    }
+
+    delete clnt_addr;
 }
 
 void Acceptor::setNewConnectionCallback(std::function<void(Socket*)> _cb) {

@@ -3,6 +3,7 @@
 #include "InetAddress.h"
 #include "Channel.h"
 #include "Acceptor.h"
+#include "Connection.h"
 
 #include <functional>
 #include <string.h>
@@ -22,37 +23,19 @@ Server::~Server() {
     delete acceptor;
 }
 
-void Server::handleReadEvent(int sockfd) {
-    char buf[READ_BUFFER];
-    while (true) {
-        bzero(&buf, sizeof(buf));
-        ssize_t bytes_read = read(sockfd, buf, sizeof(buf));
-        if (bytes_read > 0) {
-            printf("message from client fd %d: %s\n", sockfd, buf);
-            write(sockfd, buf, sizeof(buf));
-        } else if (bytes_read < 0 && errno == EINTR) {
-            printf("continue reading");
-            continue;
-        } else if (bytes_read < 0 && ((errno == EAGAIN) || (errno == EWOULDBLOCK))) {
-            printf("finish reading once, errno: %d\n", errno);
-            break;
-        } else if (bytes_read == 0) {
-            printf("EOF, client fd %d closed connection\n", sockfd);
-            close(sockfd);
-            break;
-        }
-    }
+
+void Server::newConnection(Socket *sock) {
+    Connection *conn = new Connection(loop, sock);
+    std::function<void(Socket*)> cb = std::bind(&Server::deleteConnection, this, std::placeholders::_1);
+    conn->SetDeleteConnectionCallback(cb);
+    connections[sock->getFd()] = conn;
 }
 
-void Server::newConnection(Socket *serv_sock) {
-    InetAddress *clnt_addr = new InetAddress();
-    Socket *clnt_sock = new Socket(serv_sock->accept(clnt_addr));
-    printf("new client fd %d! IP: %s Port: %d\n", clnt_sock->getFd(),
-        inet_ntoa(clnt_addr->addr.sin_addr), ntohs(clnt_addr->addr.sin_port));
-    clnt_sock->setnonblocking();
-    Channel *clntChannel = new Channel(loop, clnt_sock->getFd());
-    std::function<void()> cb = std::bind(&Server::handleReadEvent, this, clnt_sock->getFd());
-    clntChannel->setCallback(cb);
-    clntChannel->enableReading();
-    delete clnt_addr;
+void Server::deleteConnection(Socket *sock) {
+    Connection *conn = connections[sock->getFd()];
+    if (conn) {
+        delete conn;
+        connections.erase(sock->getFd());
+        printf("Connection with fd %d deleted\n", sock->getFd());
+    }
 }
