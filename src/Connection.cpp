@@ -27,6 +27,9 @@ Connection::~Connection() {
     if (sock) {
         delete sock;
     }
+    if (readBuffer) {
+        delete readBuffer;
+    }
 }
 
 void Connection::echo(int sockfd) {
@@ -36,8 +39,6 @@ void Connection::echo(int sockfd) {
         ssize_t bytes_read = read(sockfd, buf, sizeof(buf));
         if (bytes_read > 0) {
             readBuffer->append(buf, bytes_read);
-            // printf("message from client fd %d: %s\n", sockfd, buf);
-            // write(sockfd, buf, sizeof(buf));
         } else if (bytes_read < 0 && errno == EINTR) {
             printf("continue reading");
             continue;
