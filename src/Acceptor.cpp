@@ -7,7 +7,7 @@
 
 Acceptor::Acceptor(EventLoop *_loop) : loop(_loop) {
     sock = new Socket();
-    addr = new InetAddress("127.0.0.1", 8888);
+    InetAddress *addr = new InetAddress("127.0.0.1", 8888);
     sock->bind(addr);
     sock->listen();
     sock->setnonblocking();
@@ -16,12 +16,13 @@ Acceptor::Acceptor(EventLoop *_loop) : loop(_loop) {
     std::function<void()> cb = std::bind(&Acceptor::acceptConnection, this);
     acceptChannel->setCallback(cb);
     acceptChannel->enableReading();
+
+    delete addr; // Clean up the InetAddress object after binding
 }
 
 Acceptor::~Acceptor() {
     delete acceptChannel;
     delete sock;
-    delete addr;
 }
 
 void Acceptor::acceptConnection() {

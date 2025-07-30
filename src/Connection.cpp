@@ -1,6 +1,8 @@
 #include "Connection.h"
 #include "Socket.h"
 #include "Channel.h"
+#include "Buffer.h"
+#include "util.h"
 
 #include <unistd.h>
 #include <string.h>
@@ -15,6 +17,7 @@ Connection::Connection(EventLoop* _loop, Socket* _sock) : loop(_loop), sock(_soc
     std::function<void()> cb = std::bind(&Connection::echo, this, sock->getFd());
     channel->setCallback(cb);
     channel->enableReading();
+    readBuffer = new Buffer();
 }
 
 Connection::~Connection() {
@@ -32,19 +35,24 @@ void Connection::echo(int sockfd) {
         bzero(&buf, sizeof(buf));
         ssize_t bytes_read = read(sockfd, buf, sizeof(buf));
         if (bytes_read > 0) {
-            printf("message from client fd %d: %s\n", sockfd, buf);
-            write(sockfd, buf, sizeof(buf));
+            readBuffer->append(buf, bytes_read);
+            // printf("message from client fd %d: %s\n", sockfd, buf);
+            // write(sockfd, buf, sizeof(buf));
         } else if (bytes_read < 0 && errno == EINTR) {
             printf("continue reading");
             continue;
         } else if (bytes_read < 0 && ((errno == EAGAIN) || (errno == EWOULDBLOCK))) {
             printf("finish reading once, errno: %d\n", errno);
+            printf("message from client fd %d: %s\n", sockfd, readBuffer->c_str());
+            errif(write(sockfd, readBuffer->c_str(), readBuffer->size()) < 0, "socket write error");
+            readBuffer->clear(); // Clear the buffer after writing
             break;
         } else if (bytes_read == 0) {
             printf("EOF, client fd %d closed connection\n", sockfd);
             if (deleteConnectionCallback) {
                 deleteConnectionCallback(sock);
             }
+            break; // Client closed connection
         }
     }
 }

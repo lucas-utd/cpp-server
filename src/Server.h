@@ -17,7 +17,7 @@ class Server
         Server(EventLoop*);
         ~Server();
 
-        // void handleReadEvent(int);
-        void newConnection(Socket *serv_sock);
+         void handleReadEvent(int);
+        void newConnection(Socket *sock);
         void deleteConnection(Socket *sock);
 };

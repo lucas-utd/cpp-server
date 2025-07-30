@@ -1,46 +1,62 @@
-#include <stdio.h>
-#include <sys/socket.h>
-#include <arpa/inet.h>
 #include <string.h>
 #include <unistd.h>
+#include <iostream>
+
 #include "src/util.h"
+#include "src/Socket.h"
+#include "src/InetAddress.h"
+#include "src/Buffer.h"
 
 #define BUFFER_SIZE 1024
 
 int main() {
-    int sockfd = socket(AF_INET, SOCK_STREAM, 0);
-    errif(sockfd < 0, "socket create error");
-
-    struct sockaddr_in serv_addr;
-    bzero(&serv_addr, sizeof(serv_addr));
-    serv_addr.sin_family = AF_INET;
-    serv_addr.sin_addr.s_addr = inet_addr("127.0.0.1");
-    serv_addr.sin_port = htons(8888);
-
-    errif(connect(sockfd, (sockaddr*)&serv_addr, sizeof(serv_addr)) < 0, "socket connect error");
+    Socket *sock = new Socket();
+    errif(sock->getFd() < 0, "socket create error");
+    InetAddress *addr = new InetAddress("127.0.0.1", 8888);
+    sock->connect(addr);
+    errif(sock->getFd() < 0, "socket connect error");
+    
+    Buffer *sendBuffer = new Buffer();
+    Buffer *readBuffer = new Buffer();
 
     while (true) {
-        char buf[BUFFER_SIZE];
-        bzero(buf, sizeof(buf));
-        scanf("%s", buf);
-        ssize_t write_bytes = write(sockfd, buf, sizeof(buf));
+        sendBuffer->getline();
+        if (sendBuffer->size() == 0) {
+            printf("input is empty, try again...\n");
+            continue;
+        }
+
+        ssize_t write_bytes = write(sock->getFd(), sendBuffer->c_str(), sendBuffer->size());
         if (write_bytes < 0) {
             printf("socket already disconnected, can't write any more!\n");
             break;
         }
-        bzero(buf, sizeof(buf));
-        ssize_t read_bytes = read(sockfd, buf, sizeof(buf));
-        if (read_bytes > 0) {
-            printf("message from server: %s\n", buf);
-        } else if (read_bytes == 0) {
-            printf("server scocket disconnected\n");
-            break;
-        } else {
-            close(sockfd);
-            errif(true, "socket read error");
+
+        int already_read = 0;
+        char buf[BUFFER_SIZE];
+        while (true) {
+            bzero(buf, sizeof(buf));
+            ssize_t read_bytes = read(sock->getFd(), buf, sizeof(buf));
+            if (read_bytes > 0) {
+                readBuffer->append(buf, read_bytes);
+                already_read += read_bytes;
+            } else if (read_bytes == 0) {
+                printf("server disconnected\n");
+                exit(EXIT_SUCCESS);
+            }
+
+            if (already_read >= sendBuffer->size()) {
+                printf("message from server: %s\n", readBuffer->c_str());
+                break; // Exit the loop after reading enough data
+            }
         }
+        readBuffer->clear(); // Clear the read buffer for the next iteration
+        sendBuffer->clear(); // Clear the send buffer for the next input }
     }
 
-    close(sockfd);
+    delete sendBuffer;
+    delete readBuffer;
+    delete addr;
+    delete sock;
     return 0;
 }

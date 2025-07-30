@@ -4,7 +4,7 @@
 class InetAddress
 {
     private:
-        sockaddr_in addr;
+        struct sockaddr_in addr;
         socklen_t addr_len;
     public:
         InetAddress();

@@ -17,6 +17,7 @@ class Socket
     void setnonblocking();
 
     int accept(InetAddress* addr);
+    void connect(InetAddress* addr);
 
     int getFd() const;
 };
