@@ -27,7 +27,6 @@ void Socket::bind(InetAddress* _addr) {
     struct sockaddr_in addr = _addr->getAddr();
     socklen_t addr_len = _addr->getAddr_len();
     errif(::bind(fd, (sockaddr*)&addr, addr_len) < 0, "socket bind error");
-    _addr->setInetAddr(addr, addr_len);
 }
 
 void Socket::listen() {
@@ -44,7 +43,7 @@ void Socket::setnonblocking() {
 int Socket::accept(InetAddress* _addr) {
     struct sockaddr_in addr;
     socklen_t addr_len = sizeof(addr);
-    bzero(&addr, sizeof(addr));
+    bzero(&addr, addr_len);
     int clnt_sockfd = ::accept(fd, (sockaddr*)&addr, &addr_len);
     errif(clnt_sockfd < 0, "socket accept error");
     _addr->setInetAddr(addr, addr_len);

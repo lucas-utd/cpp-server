@@ -6,10 +6,7 @@
 #include "Connection.h"
 
 #include <functional>
-#include <string.h>
 #include <unistd.h>
-#include <stdio.h>
-#include <errno.h>
 
 #define READ_BUFFER 1024
 
@@ -25,17 +22,22 @@ Server::~Server() {
 
 
 void Server::newConnection(Socket *sock) {
-    Connection *conn = new Connection(loop, sock);
-    std::function<void(Socket*)> cb = std::bind(&Server::deleteConnection, this, std::placeholders::_1);
-    conn->SetDeleteConnectionCallback(cb);
-    connections[sock->getFd()] = conn;
+    if (sock->getFd() > 0){
+        Connection *conn = new Connection(loop, sock);
+        std::function<void(int)> cb = std::bind(&Server::deleteConnection, this, std::placeholders::_1);
+        conn->SetDeleteConnectionCallback(cb);
+        connections[sock->getFd()] = conn;
+    }
 }
 
-void Server::deleteConnection(Socket *sock) {
-    Connection *conn = connections[sock->getFd()];
-    if (conn) {
-        delete conn;
-        connections.erase(sock->getFd());
-        printf("Connection with fd %d deleted\n", sock->getFd());
+void Server::deleteConnection(int sockfd) {
+    if (sockfd > 0)
+    {
+        auto it = connections.find(sockfd);
+        if (it != connections.end()) {
+            delete it->second;
+            connections.erase(it);
+            printf("Connection with fd %d deleted\n", sockfd);
+        }
     }
 }

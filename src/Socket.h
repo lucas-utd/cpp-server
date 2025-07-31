@@ -14,10 +14,10 @@ class Socket
 
     void bind(InetAddress* addr);
     void listen();
-    void setnonblocking();
-
     int accept(InetAddress* addr);
+
     void connect(InetAddress* addr);
 
+    void setnonblocking();
     int getFd() const;
 };

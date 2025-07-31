@@ -5,7 +5,7 @@
 
 
 Channel::Channel(EventLoop *_loop, int _fd)
-    : loop(_loop), fd(_fd), events(0), revents(0), inEpoll(false) {
+    : loop(_loop), fd(_fd), events(0), ready(0), inEpoll(false), useThreadPool(false) {
 }
 
 Channel::~Channel() {
@@ -16,11 +16,31 @@ Channel::~Channel() {
 }
 
 void Channel::handleEvent() {
-    callback();
+    if (ready & (EPOLLIN | EPOLLPRI)) {
+        if (useThreadPool) {
+            loop->addThread(readCallback);
+        }
+        else if (readCallback) {
+            readCallback();
+        }
+    }
+    if (ready & (EPOLLOUT)) {
+        if (useThreadPool) {
+            loop->addThread(writeCallback);
+        }
+        else if (writeCallback) {
+            writeCallback();
+        }
+    }
 }
 
-void Channel::enableReading() {
-    events |= EPOLLIN | EPOLLET;
+void Channel::enableRead() {
+    events |= EPOLLIN | EPOLLPRI;
+    loop->updateChannel(this);
+}
+
+void Channel::useET() {
+    events |= EPOLLET; // Enable edge-triggered mode
     loop->updateChannel(this);
 }
 
@@ -32,22 +52,30 @@ uint32_t Channel::getEvents() {
     return events;
 }
 
-uint32_t Channel::getRevents() {
-    return revents;
+uint32_t Channel::getReady() {
+    return ready;
 }
 
 bool Channel::getInEpoll() {
     return inEpoll;
 }
 
-void Channel::setInEpoll() {
-    inEpoll = true;
+void Channel::setInEpoll(bool _in) {
+    inEpoll = _in;
 }
 
-void Channel::setRevents(uint32_t _revents) {
-    revents = _revents;
+void Channel::setReady(uint32_t _ev) {
+    ready = _ev;
 }
 
-void Channel::setCallback(std::function<void()> cb) {
-    callback = std::move(cb);
+void Channel::setReadCallback(std::function<void()> cb) {
+    readCallback = std::move(cb);
+}
+
+void Channel::setWriteCallback(std::function<void()> cb) {
+    writeCallback = std::move(cb);
+}
+
+void Channel::setUseThreadPool(bool _use) {
+    useThreadPool = _use;
 }
