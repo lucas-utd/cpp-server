@@ -13,4 +13,5 @@ class InetAddress
         void setInetAddr(sockaddr_in _addr, socklen_t _addr_len);
         sockaddr_in getAddr();
         socklen_t getAddr_len();
+        uint16_t getPort() const;
 };

@@ -5,7 +5,7 @@
 
 
 Channel::Channel(EventLoop *_loop, int _fd)
-    : loop(_loop), fd(_fd), events(0), ready(0), inEpoll(false), useThreadPool(false) {
+    : loop(_loop), fd(_fd), events(0), ready(0), inEpoll(false) {
 }
 
 Channel::~Channel() {
@@ -17,18 +17,12 @@ Channel::~Channel() {
 
 void Channel::handleEvent() {
     if (ready & (EPOLLIN | EPOLLPRI)) {
-        if (useThreadPool) {
-            loop->addThread(readCallback);
-        }
-        else if (readCallback) {
+        if (readCallback) {
             readCallback();
         }
     }
     if (ready & (EPOLLOUT)) {
-        if (useThreadPool) {
-            loop->addThread(writeCallback);
-        }
-        else if (writeCallback) {
+        if (writeCallback) {
             writeCallback();
         }
     }
@@ -74,8 +68,4 @@ void Channel::setReadCallback(std::function<void()> cb) {
 
 void Channel::setWriteCallback(std::function<void()> cb) {
     writeCallback = std::move(cb);
-}
-
-void Channel::setUseThreadPool(bool _use) {
-    useThreadPool = _use;
 }
