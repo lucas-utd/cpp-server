@@ -1,12 +1,14 @@
 #include "Socket.h"
-#include "InetAddress.h"
-#include "util.h"
 
 #include <errno.h>
 #include <fcntl.h>
 #include <string.h>
 #include <sys/socket.h>
 #include <unistd.h>
+
+#include "InetAddress.h"
+#include "util.h"
+
 
 Socket::Socket() : fd(-1) {
   fd = socket(AF_INET, SOCK_STREAM, 0);
@@ -25,7 +27,7 @@ Socket::~Socket() {
 void Socket::bind(InetAddress *_addr) {
   struct sockaddr_in addr = _addr->getAddr();
   socklen_t addr_len = _addr->getAddr_len();
-  errif(::bind(fd, (sockaddr *)&addr, addr_len) < 0, "socket bind error");
+  errif(::bind(fd, reinterpret_cast<sockaddr *>(&addr), addr_len) < 0, "socket bind error");
 }
 
 void Socket::listen() { errif(::listen(fd, SOMAXCONN) < 0, "socket listen error"); }
@@ -45,7 +47,7 @@ int Socket::accept(InetAddress *_addr) {
   bzero(&addr, addr_len);
   if (fcntl(fd, F_GETFL) & O_NONBLOCK) {
     while (true) {
-      clnt_sockfd = ::accept(fd, (sockaddr *)&addr, &addr_len);
+      clnt_sockfd = ::accept(fd, reinterpret_cast<sockaddr *>(&addr), &addr_len);
       if (clnt_sockfd < 0 && ((errno == EAGAIN) || (errno == EWOULDBLOCK))) {
         continue;  // No connections available, try again
       } else if (clnt_sockfd < 0) {
@@ -55,7 +57,7 @@ int Socket::accept(InetAddress *_addr) {
       }
     }
   } else {
-    clnt_sockfd = ::accept(fd, (sockaddr *)&addr, &addr_len);
+    clnt_sockfd = ::accept(fd, reinterpret_cast<sockaddr *>(&addr), &addr_len);
     errif(clnt_sockfd < 0, "socket accept error");
   }
   _addr->setInetAddr(addr, addr_len);
@@ -67,7 +69,7 @@ void Socket::connect(InetAddress *_addr) {
   struct sockaddr_in addr = _addr->getAddr();
   if (fcntl(fd, F_GETFL) & O_NONBLOCK) {
     while (true) {
-      int ret = ::connect(fd, (sockaddr *)&addr, _addr->getAddr_len());
+      int ret = ::connect(fd, reinterpret_cast<sockaddr *>(&addr), _addr->getAddr_len());
       if (ret == 0) {
         return;  // Successfully connected
       } else if (errno == EINPROGRESS) {
@@ -89,7 +91,8 @@ void Socket::connect(InetAddress *_addr) {
       }
     }
   } else {
-    errif(::connect(fd, (sockaddr *)&addr, _addr->getAddr_len()) < 0 && errno != EINPROGRESS, "socket connect error");
+    errif(::connect(fd, reinterpret_cast<sockaddr *>(&addr),
+        _addr->getAddr_len()) < 0 && errno != EINPROGRESS, "socket connect error");
     return;  // Non-blocking connect, just return
   }
 }

@@ -1,14 +1,17 @@
 #include "Connection.h"
-#include "Buffer.h"
-#include "Channel.h"
-#include "Socket.h"
-#include "util.h"
 
 #include <errno.h>
 #include <stdio.h>
 #include <string.h>
 #include <unistd.h>
+
 #include <functional>
+
+#include "Buffer.h"
+#include "Channel.h"
+#include "Socket.h"
+#include "util.h"
+
 
 #define READ_BUFFER 1024
 
