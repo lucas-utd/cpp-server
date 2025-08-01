@@ -3,69 +3,50 @@
 
 #include <unistd.h>
 
-
-Channel::Channel(EventLoop *_loop, int _fd)
-    : loop(_loop), fd(_fd), events(0), ready(0), inEpoll(false) {
-}
+Channel::Channel(EventLoop *_loop, int _fd) : loop(_loop), fd(_fd), events(0), ready(0), inEpoll(false) {}
 
 Channel::~Channel() {
-    if (fd >= 0) {
-        close(fd);
-    }
-    fd = -1;
+  if (fd >= 0) {
+    close(fd);
+  }
+  fd = -1;
 }
 
 void Channel::handleEvent() {
-    if (ready & (EPOLLIN | EPOLLPRI)) {
-        if (readCallback) {
-            readCallback();
-        }
+  if (ready & (EPOLLIN | EPOLLPRI)) {
+    if (readCallback) {
+      readCallback();
     }
-    if (ready & (EPOLLOUT)) {
-        if (writeCallback) {
-            writeCallback();
-        }
+  }
+  if (ready & (EPOLLOUT)) {
+    if (writeCallback) {
+      writeCallback();
     }
+  }
 }
 
 void Channel::enableRead() {
-    events |= EPOLLIN | EPOLLPRI;
-    loop->updateChannel(this);
+  events |= EPOLLIN | EPOLLPRI;
+  loop->updateChannel(this);
 }
 
 void Channel::useET() {
-    events |= EPOLLET; // Enable edge-triggered mode
-    loop->updateChannel(this);
+  events |= EPOLLET;  // Enable edge-triggered mode
+  loop->updateChannel(this);
 }
 
-int Channel::getFd() {
-    return fd;
-}
+int Channel::getFd() { return fd; }
 
-uint32_t Channel::getEvents() {
-    return events;
-}
+uint32_t Channel::getEvents() { return events; }
 
-uint32_t Channel::getReady() {
-    return ready;
-}
+uint32_t Channel::getReady() { return ready; }
 
-bool Channel::getInEpoll() {
-    return inEpoll;
-}
+bool Channel::getInEpoll() { return inEpoll; }
 
-void Channel::setInEpoll(bool _in) {
-    inEpoll = _in;
-}
+void Channel::setInEpoll(bool _in) { inEpoll = _in; }
 
-void Channel::setReady(uint32_t _ev) {
-    ready = _ev;
-}
+void Channel::setReady(uint32_t _ev) { ready = _ev; }
 
-void Channel::setReadCallback(std::function<void()> cb) {
-    readCallback = std::move(cb);
-}
+void Channel::setReadCallback(std::function<void()> cb) { readCallback = std::move(cb); }
 
-void Channel::setWriteCallback(std::function<void()> cb) {
-    writeCallback = std::move(cb);
-}
+void Channel::setWriteCallback(std::function<void()> cb) { writeCallback = std::move(cb); }
