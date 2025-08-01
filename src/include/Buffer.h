@@ -2,18 +2,22 @@
 
 #include <string>
 
+#include "Macros.h"
+
 class Buffer {
- private:
-  std::string buf;
-
  public:
-  Buffer();
-  ~Buffer();
+  Buffer() = default;
+  ~Buffer() = default;
 
-  void append(const char *_str, int _size);
-  ssize_t size();
-  const char *c_str();
-  void clear();
-  void getline();
-  void setBuf(const char *_str);
+  DISALLOW_COPY_AND_MOVE(Buffer);
+
+  void Append(const char *_str, int _size);
+  ssize_t Size();
+  const char *ToStr();
+  void Clear();
+  void Getline();
+  void SetBuf(const char *_str);
+
+ private:
+  std::string buf_;
 };

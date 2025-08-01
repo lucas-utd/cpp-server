@@ -3,18 +3,18 @@
 #include "Epoll.h"
 #include "ThreadPool.h"
 
-EventLoop::EventLoop() : ep(nullptr), quit(false) { ep = new Epoll(); }
+EventLoop::EventLoop() { epoll_ = new Epoll(); }
 
-EventLoop::~EventLoop() { delete ep; }
+EventLoop::~EventLoop() { delete epoll_; }
 
-void EventLoop::loop() {
-  while (!quit) {
+void EventLoop::Loop() {
+  while (!quit_) {
     std::vector<Channel *> chs;
-    chs = ep->poll();
+    chs = epoll_->Poll();
     for (auto it = chs.begin(); it != chs.end(); ++it) {
-      (*it)->handleEvent();
+      (*it)->HandleEvent();
     }
   }
 }
 
-void EventLoop::updateChannel(Channel *ch) { ep->updateChannel(ch); }
+void EventLoop::UpdateChannel(Channel *ch) { epoll_->UpdateChannel(ch); }

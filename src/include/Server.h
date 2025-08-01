@@ -1,6 +1,10 @@
 #pragma once
+
 #include <map>
 #include <vector>
+#include <functional>
+
+#include "Macros.h"
 
 class EventLoop;
 class Socket;
@@ -9,19 +13,21 @@ class Connection;
 class ThreadPool;
 
 class Server {
- private:
-  EventLoop *mainReactor;
-  ;
-  Acceptor *acceptor;
-  std::map<int, Connection *> connections;
-  std::vector<EventLoop *> subReactors;
-  ThreadPool *thpool;
-
  public:
-  Server(EventLoop *);
+  explicit Server(EventLoop *_loop);
   ~Server();
 
-  void handleReadEvent(int);
-  void newConnection(Socket *sock);
-  void deleteConnection(int sockfd);
+  DISALLOW_COPY_AND_MOVE(Server);
+
+  void NewConnection(Socket *_sock);
+  void DeleteConnection(Socket *_sock);
+  void OnConnect(std::function<void(Connection *)> _fn);
+
+ private:
+  EventLoop *main_reactor_;
+  Acceptor *acceptor_;
+  std::map<int, Connection *> connections_;
+  std::vector<EventLoop *> sub_reactors_;
+  ThreadPool *thread_pool_;
+  std::function<void(Connection *)> on_connect_callback_;
 };

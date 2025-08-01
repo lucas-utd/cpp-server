@@ -1,25 +1,27 @@
 #include "InetAddress.h"
 #include <string.h>
 
-InetAddress::InetAddress() : addr_len(sizeof(addr)) { bzero(&addr, sizeof(addr)); }
-
-InetAddress::InetAddress(const char *ip, uint16_t port) : addr_len(sizeof(addr)) {
-  bzero(&addr, sizeof(addr));
-  addr.sin_family = AF_INET;
-  addr.sin_addr.s_addr = inet_addr(ip);
-  addr.sin_port = htons(port);
-  addr_len = sizeof(addr);
+InetAddress::InetAddress(const char *ip, uint16_t port) {
+  memset(&addr_, 0, sizeof(addr_));
+  addr_.sin_family = AF_INET;
+  addr_.sin_addr.s_addr = inet_addr(ip);
+  addr_.sin_port = htons(port);
 }
 
 InetAddress::~InetAddress() {
   // Destructor implementation (if needed)
 }
 
-void InetAddress::setInetAddr(sockaddr_in _addr, socklen_t _addr_len) {
-  addr = _addr;
-  addr_len = _addr_len;
+void InetAddress::SetAddr(sockaddr_in _addr) {
+  addr_ = _addr;
 }
 
-sockaddr_in InetAddress::getAddr() { return addr; }
+sockaddr_in InetAddress::GetAddr() const { return addr_; }
 
-socklen_t InetAddress::getAddr_len() { return addr_len; }
+const char *InetAddress::GetIp() const {
+  return inet_ntoa(addr_.sin_addr);
+}
+
+uint16_t InetAddress::GetPort() const {
+  return ntohs(addr_.sin_port);
+}

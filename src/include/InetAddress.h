@@ -1,17 +1,22 @@
 #pragma once
+
 #include <arpa/inet.h>
 
-class InetAddress {
- private:
-  struct sockaddr_in addr;
-  socklen_t addr_len;
+#include "Macros.h"
 
+class InetAddress {
  public:
-  InetAddress();
+  InetAddress() = default;
   InetAddress(const char *ip, uint16_t port);
   ~InetAddress();
-  void setInetAddr(sockaddr_in _addr, socklen_t _addr_len);
-  sockaddr_in getAddr();
-  socklen_t getAddr_len();
-  uint16_t getPort() const;
+
+  DISALLOW_COPY_AND_MOVE(InetAddress);
+
+  void SetAddr(sockaddr_in _addr);
+  sockaddr_in GetAddr() const;
+  const char *GetIp() const;
+  uint16_t GetPort() const;
+
+ private:
+  struct sockaddr_in addr_;
 };

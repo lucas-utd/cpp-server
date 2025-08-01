@@ -1,22 +1,30 @@
 #pragma once
 
+#include <arpa/inet.h>
+
+#include "Macros.h"
+
 class InetAddress;
 
 class Socket {
- private:
-  int fd;  // file descriptor for the socket
-
  public:
   Socket();
-  Socket(int fd);
+  explicit Socket(int fd);
   ~Socket();
 
-  void bind(InetAddress *addr);
-  void listen();
-  int accept(InetAddress *addr);
+  DISALLOW_COPY_AND_MOVE(Socket);
 
-  void connect(InetAddress *addr);
+  void Bind(InetAddress *_addr);
+  void Listen();
+  int Accept(InetAddress *_addr);
 
-  void setnonblocking();
-  int getFd() const;
+  void Connect(InetAddress *_addr);
+  void Connect(const char *ip, uint16_t port);
+
+  void SetNonBlocking();
+    bool IsNonBlocking() const;
+  int GetFd() const;
+
+ private:
+  int fd_{1};  // file descriptor for the socket
 };

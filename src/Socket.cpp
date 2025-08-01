@@ -9,67 +9,71 @@
 #include "InetAddress.h"
 #include "util.h"
 
-
-Socket::Socket() : fd(-1) {
-  fd = socket(AF_INET, SOCK_STREAM, 0);
-  errif(fd < 0, "socket create error");
+Socket::Socket() : fd_(-1) {
+  fd_ = socket(AF_INET, SOCK_STREAM, 0);
+  ErrorIf(fd_ < 0, "socket create error");
 }
 
-Socket::Socket(int _fd) : fd(_fd) { errif(fd < 0, "socket create error"); }
+Socket::Socket(int _fd) : fd_(_fd) { ErrorIf(fd_ < 0, "socket create error"); }
 
 Socket::~Socket() {
-  if (fd >= 0) {
-    close(fd);
-    fd = -1;
+  if (fd_ >= 0) {
+    close(fd_);
+    fd_ = -1;
   }
 }
 
-void Socket::bind(InetAddress *_addr) {
-  struct sockaddr_in addr = _addr->getAddr();
-  socklen_t addr_len = _addr->getAddr_len();
-  errif(::bind(fd, reinterpret_cast<sockaddr *>(&addr), addr_len) < 0, "socket bind error");
+void Socket::Bind(InetAddress *_addr) {
+  struct sockaddr_in tmp_addr = _addr->GetAddr();
+  ErrorIf(::bind(fd_, reinterpret_cast<sockaddr *>(&tmp_addr), sizeof(tmp_addr)) < 0, "socket bind error");
 }
 
-void Socket::listen() { errif(::listen(fd, SOMAXCONN) < 0, "socket listen error"); }
+void Socket::Listen() { ErrorIf(::listen(fd_, SOMAXCONN) < 0, "socket listen error"); }
 
-void Socket::setnonblocking() {
-  int flags = fcntl(fd, F_GETFL, 0);
-  errif(flags < 0, "fcntl get flags error");
+void Socket::SetNonBlocking() {
+  int flags = fcntl(fd_, F_GETFL, 0);
+  ErrorIf(flags < 0, "fcntl get flags error");
   flags |= O_NONBLOCK;
-  errif(fcntl(fd, F_SETFL, flags) < 0, "fcntl set non-blocking error");
+  ErrorIf(fcntl(fd_, F_SETFL, flags) < 0, "fcntl set non-blocking error");
 }
 
-int Socket::accept(InetAddress *_addr) {
+bool Socket::IsNonBlocking() const {
+  int flags = fcntl(fd_, F_GETFL, 0);
+  ErrorIf(flags < 0, "fcntl get flags error");
+  return (flags & O_NONBLOCK) != 0;  // Check if the O_NONBLOCK flag is set
+}
+
+int Socket::Accept(InetAddress *_addr) {
   // for server socket, we need to accept the connection
   int clnt_sockfd = -1;
-  struct sockaddr_in addr;
-  socklen_t addr_len = sizeof(addr);
-  bzero(&addr, addr_len);
-  if (fcntl(fd, F_GETFL) & O_NONBLOCK) {
+  struct sockaddr_in tmp_addr;
+  socklen_t addr_len = sizeof(tmp_addr);
+  bzero(&tmp_addr, addr_len);
+  if (fcntl(fd_, F_GETFL) & O_NONBLOCK) {
     while (true) {
-      clnt_sockfd = ::accept(fd, reinterpret_cast<sockaddr *>(&addr), &addr_len);
+      clnt_sockfd = ::accept(fd_, reinterpret_cast<sockaddr *>(&tmp_addr), &addr_len);
       if (clnt_sockfd < 0 && ((errno == EAGAIN) || (errno == EWOULDBLOCK))) {
         continue;  // No connections available, try again
       } else if (clnt_sockfd < 0) {
-        errif(clnt_sockfd < 0, "socket accept error");
+        ErrorIf(clnt_sockfd < 0, "socket accept error");
       } else {
         break;  // Successfully accepted a connection
       }
     }
   } else {
-    clnt_sockfd = ::accept(fd, reinterpret_cast<sockaddr *>(&addr), &addr_len);
-    errif(clnt_sockfd < 0, "socket accept error");
+    clnt_sockfd = ::accept(fd_, reinterpret_cast<sockaddr *>(&tmp_addr), &addr_len);
+    ErrorIf(clnt_sockfd < 0, "socket accept error");
   }
-  _addr->setInetAddr(addr, addr_len);
+  _addr->SetAddr(tmp_addr);
   return clnt_sockfd;  // Return the client socket file descriptor
 }
 
-void Socket::connect(InetAddress *_addr) {
+void Socket::Connect(InetAddress *_addr) {
   // for client socket, we need to connect to the server
-  struct sockaddr_in addr = _addr->getAddr();
-  if (fcntl(fd, F_GETFL) & O_NONBLOCK) {
+  struct sockaddr_in tmp_addr = _addr->GetAddr();
+  if (fcntl(fd_, F_GETFL) & O_NONBLOCK) {
     while (true) {
-      int ret = ::connect(fd, reinterpret_cast<sockaddr *>(&addr), _addr->getAddr_len());
+      int ret = ::connect(fd_, reinterpret_cast<sockaddr *>(&tmp_addr), sizeof(tmp_addr));
       if (ret == 0) {
         return;  // Successfully connected
       } else if (errno == EINPROGRESS) {
@@ -87,14 +91,20 @@ void Socket::connect(InetAddress *_addr) {
                        failure).
                    */
       } else if (ret < 0 && errno != EINPROGRESS) {
-        errif(true, "socket connect error");
+        ErrorIf(true, "socket connect error");
       }
     }
   } else {
-    errif(::connect(fd, reinterpret_cast<sockaddr *>(&addr),
-        _addr->getAddr_len()) < 0 && errno != EINPROGRESS, "socket connect error");
+    ErrorIf(::connect(fd_, reinterpret_cast<sockaddr *>(&tmp_addr), sizeof(tmp_addr)) < 0 && errno != EINPROGRESS,
+          "socket connect error");
     return;  // Non-blocking connect, just return
   }
 }
 
-int Socket::getFd() const { return fd; }
+void Socket::Connect(const char *ip, uint16_t port) {
+  // for client socket, we need to connect to the server
+  InetAddress addr(ip, port);
+  Connect(&addr);
+}
+
+int Socket::GetFd() const { return fd_; }

@@ -1,21 +1,25 @@
 #pragma once
 #include <functional>
 
+#include "Macros.h"
+
 class Epoll;
 class Channel;
 class ThreadPool;
 
 class EventLoop {
- private:
-  Epoll *ep;
-  bool quit;
-
  public:
   EventLoop();
   ~EventLoop();
 
-  void loop();
-  void updateChannel(Channel *channel);
+  DISALLOW_COPY_AND_MOVE(EventLoop);
 
-  void addThread(std::function<void()>);
+  void Loop();
+  void UpdateChannel(Channel *channel);
+
+  void AddThread(std::function<void()>);
+
+ private:
+  Epoll *epoll_{nullptr};
+  bool quit_{false};
 };
